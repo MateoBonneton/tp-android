@@ -1,0 +1,366 @@
+package com.example.tp1
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import androidx.window.core.layout.WindowSizeClass
+import androidx.window.core.layout.WindowWidthSizeClass
+import coil.compose.AsyncImage
+import com.example.tp1.ui.theme.TP1Theme
+import kotlinx.serialization.Serializable
+
+@Serializable object ScreenDest
+@Serializable object GlobalFilmsDest
+
+@Serializable object FilmsTab
+@Serializable object SeriesTab
+@Serializable object ActeursTab
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            TP1Theme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    val backStack = remember { mutableStateListOf<Any>(ScreenDest) }
+                    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+
+                    Column(modifier = Modifier.padding(innerPadding)) {
+                        NavDisplay(
+                            backStack = backStack,
+                            entryProvider = entryProvider {
+                                entry<ScreenDest> {
+                                    Screen(
+                                        classes = windowSizeClass,
+                                        onNavigate = { backStack.add(GlobalFilmsDest) }
+                                    )
+                                }
+                                entry<GlobalFilmsDest> {
+                                    MovieMainPage()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MovieMainPage() {
+    val viewModel: MainViewModel = viewModel()
+    Column {
+        Text(
+            text = "Tous les films",
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier
+                .padding(top = 15.dp)
+                .fillMaxWidth()
+        )
+        MovieContent(viewModel)
+    }
+}
+
+@Composable
+fun MovieContent(viewModel: MainViewModel) {
+    val movies by viewModel.movies.collectAsStateWithLifecycle()
+    val tabBackStack = remember { mutableStateListOf<Any>(FilmsTab) }
+
+    LaunchedEffect(true) {
+        viewModel.getMovies()
+    }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Films") },
+                    label = { Text("Films") },
+                    selected = tabBackStack.last() is FilmsTab,
+                    onClick = {
+                        if (tabBackStack.last() !is FilmsTab) {
+                            tabBackStack.add(FilmsTab)
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Séries") },
+                    label = { Text("Séries") },
+                    selected = tabBackStack.last() is SeriesTab,
+                    onClick = {
+                        if (tabBackStack.last() !is SeriesTab) {
+                            tabBackStack.add(SeriesTab)
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Acteurs") },
+                    label = { Text("Acteurs") },
+                    selected = tabBackStack.last() is ActeursTab,
+                    onClick = {
+                        if (tabBackStack.last() !is ActeursTab) {
+                            tabBackStack.add(ActeursTab)
+                        }
+                    }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            NavDisplay(
+                backStack = tabBackStack,
+                entryProvider = entryProvider {
+                    entry<FilmsTab> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(movies) { movie ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    elevation = CardDefaults.cardElevation(4.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        AsyncImage(
+                                            model = "https://image.tmdb.org/t/p/w780${movie.poster_path}",
+                                            contentDescription = movie.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                        )
+                                        Text(
+                                            text = movie.title,
+                                            modifier = Modifier.padding(8.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textAlign = TextAlign.Center,
+                                            minLines = 2,
+                                            maxLines = 2
+                                        )
+                                        Text(
+                                            text = movie.release_date,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    entry<SeriesTab> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Page Séries")
+                        }
+                    }
+                    entry<ActeursTab> {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Page Acteurs")
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun Screen(classes: WindowSizeClass, onNavigate: () -> Unit) {
+    val classeLargeur = classes.windowWidthSizeClass
+
+    when (classeLargeur) {
+        WindowWidthSizeClass.COMPACT -> {
+            Column(
+                Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .padding(start = 50.dp, end = 50.dp)
+                ) {
+                    Image(
+                        painterResource(R.drawable.profil),
+                        contentDescription = "Photo de profil",
+                        modifier = Modifier
+                            .size(200.dp)
+                            .border(BorderStroke(1.dp, Color.DarkGray), CircleShape)
+                            .clip(CircleShape)
+                    )
+                    Text(
+                        text = "Matéo Bonneton",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.headlineLarge,
+                        modifier = Modifier.padding(top = 15.dp)
+                    )
+                    Text(
+                        text = "Jeune étudiant en BUT MMI désespéré car l'avenir dans le web est menacé",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = 15.dp)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(top = 50.dp)
+                    ) {
+                        Row {
+                            Icon(
+                                imageVector = Icons.Rounded.Email,
+                                contentDescription = "Email",
+                                tint = Color.Gray,
+                                modifier = Modifier.padding(end = 2.dp)
+                            )
+                            Text(text = "mateobonneton@gmail.com")
+                        }
+                        Row {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = "Youtube",
+                                tint = Color.Red,
+                                modifier = Modifier.padding(end = 2.dp)
+                            )
+                            Text(text = "https://www.youtube.com/@mateo7vie")
+                        }
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(top = 100.dp)
+                    ) {
+                        Button(onClick = { onNavigate() }) {
+                            Text("Démarrer")
+                        }
+                    }
+                }
+            }
+        }
+        else -> {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(20.dp)
+                    ) {
+                        Image(
+                            painterResource(R.drawable.profil),
+                            contentDescription = "Photo de profil",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .border(BorderStroke(1.dp, Color.DarkGray), CircleShape)
+                                .clip(CircleShape)
+                        )
+                        Text(
+                            text = "Matéo Bonneton",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.headlineLarge,
+                            modifier = Modifier.padding(top = 15.dp)
+                        )
+                        Text(
+                            text = "Jeune étudiant en BUT MMI désespéré car l'avenir dans le web est menacé",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(top = 15.dp)
+                        )
+                    }
+
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(top = 50.dp)
+                    ) {
+                        Row(modifier = Modifier.padding(bottom = 8.dp)) {
+                            Icon(
+                                imageVector = Icons.Rounded.Email,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.padding(end = 2.dp)
+                            )
+                            Text(text = "mateobonneton@gmail.com")
+                        }
+                        Row(modifier = Modifier.padding(bottom = 20.dp)) {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.Red,
+                                modifier = Modifier.padding(end = 2.dp)
+                            )
+                            Text(text = "https://www.youtube.com/@mateo7vie")
+                        }
+                        Button(onClick = { onNavigate() }) {
+                            Text("Démarrer")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
