@@ -7,6 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +23,23 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -62,6 +71,14 @@ import kotlinx.serialization.Serializable
 @Serializable object FilmsTab
 @Serializable object SeriesTab
 @Serializable object ActeursTab
+
+@Serializable
+data class MovieDetailsDest(
+    val title: String,
+    val poster_path: String? = null,
+    val release_date: String = "",
+    val overview: String = ""
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -169,7 +186,18 @@ fun MovieContent(viewModel: MainViewModel) {
                         ) {
                             items(movies) { movie ->
                                 Card(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            tabBackStack.add(
+                                                MovieDetailsDest(
+                                                    title = movie.title,
+                                                    poster_path = movie.poster_path,
+                                                    release_date = movie.release_date,
+                                                    overview = movie.overview
+                                                )
+                                            )
+                                        },
                                     elevation = CardDefaults.cardElevation(4.dp)
                                 ) {
                                     Column(
@@ -179,8 +207,7 @@ fun MovieContent(viewModel: MainViewModel) {
                                             model = "https://image.tmdb.org/t/p/w780${movie.poster_path}",
                                             contentDescription = movie.title,
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                         Text(
                                             text = movie.title,
@@ -188,7 +215,8 @@ fun MovieContent(viewModel: MainViewModel) {
                                             style = MaterialTheme.typography.bodyMedium,
                                             textAlign = TextAlign.Center,
                                             minLines = 2,
-                                            maxLines = 2
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = movie.release_date,
@@ -200,6 +228,17 @@ fun MovieContent(viewModel: MainViewModel) {
                                 }
                             }
                         }
+                    }
+                    entry<MovieDetailsDest> { dest ->
+                        MovieDetailsScreen(
+                            title = dest.title,
+                            posterPath = dest.poster_path,
+                            releaseDate = dest.release_date,
+                            overview = dest.overview,
+                            onBack = {
+                                if (tabBackStack.size > 1) tabBackStack.removeAt(tabBackStack.lastIndex)
+                            }
+                        )
                     }
                     entry<SeriesTab> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -213,6 +252,93 @@ fun MovieContent(viewModel: MainViewModel) {
                     }
                 }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MovieDetailsScreen(
+    title: String,
+    posterPath: String?,
+    releaseDate: String,
+    overview: String,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Retour"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            if (!posterPath.isNullOrBlank()) {
+                AsyncImage(
+                    model = "https://image.tmdb.org/t/p/w780$posterPath",
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                )
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            if (releaseDate.isNotBlank()) {
+                Text(
+                    text = "Date de sortie : $releaseDate",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            if (overview.isNotBlank()) {
+                Text(
+                    text = "Résumé",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = overview,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            } else {
+                Text(
+                    text = "Aucune description disponible.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
         }
     }
 }
