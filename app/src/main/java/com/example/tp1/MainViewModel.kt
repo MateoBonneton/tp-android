@@ -37,7 +37,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun fetchPlayList(): Playlist {
-        val
+        val moshi = Moshi.Builder()
     }
 
 }
