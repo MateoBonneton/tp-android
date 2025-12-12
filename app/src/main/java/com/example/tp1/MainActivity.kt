@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.HideImage
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tv
@@ -78,11 +79,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 
 @Serializable object ScreenDest
-@Serializable object GlobalFilmsDest
+@Serializable object GlobalAppliDest
 
 @Serializable object FilmsTab
 @Serializable object SeriesTab
 @Serializable object ActeursTab
+@Serializable object MusicTab
 
 @Serializable
 data class MovieDetailsDest(
@@ -123,10 +125,10 @@ class MainActivity : ComponentActivity() {
                                 entry<ScreenDest> {
                                     Screen(
                                         classes = windowSizeClass,
-                                        onNavigate = { backStack.add(GlobalFilmsDest) }
+                                        onNavigate = { backStack.add(GlobalAppliDest) }
                                     )
                                 }
-                                entry<GlobalFilmsDest> {
+                                entry<GlobalAppliDest> {
                                     MovieMainPage()
                                 }
                             }
@@ -143,7 +145,7 @@ fun MovieMainPage() {
     val viewModel: MainViewModel = viewModel()
     Column {
         Text(
-            text = "Tous les films",
+            text = "Application Android",
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier
@@ -158,7 +160,7 @@ fun MovieMainPage() {
 @Composable
 fun MovieContent(viewModel: MainViewModel) {
     val movies by viewModel.movies.collectAsStateWithLifecycle()
-    val tabBackStack = remember { mutableStateListOf<Any>(FilmsTab) }
+    val tabBackStack = remember { mutableStateListOf<Any>(MusicTab) }
     val series by viewModel.series.collectAsStateWithLifecycle()
     val persons by viewModel.persons.collectAsStateWithLifecycle()
 
@@ -259,6 +261,16 @@ fun MovieContent(viewModel: MainViewModel) {
                     onClick = {
                         if (tabBackStack.last() !is ActeursTab) {
                             tabBackStack.add(ActeursTab)
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Rounded.MusicNote, contentDescription = "Musiques") },
+                    label = { Text("Acteurs") },
+                    selected = tabBackStack.last() is MusicTab,
+                    onClick = {
+                        if (tabBackStack.last() !is MusicTab) {
+                            tabBackStack.add(MusicTab)
                         }
                     }
                 )
@@ -434,6 +446,11 @@ fun MovieContent(viewModel: MainViewModel) {
                                 }
                             }
                         }
+                    }
+                    entry<MusicTab> {
+                        Text(
+                            text = "toutes vos musiques",
+                        )
                     }
                 }
             )
