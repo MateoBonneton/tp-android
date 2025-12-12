@@ -25,8 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Email
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.HideImage
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +42,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -65,6 +72,11 @@ import coil.compose.AsyncImage
 import com.example.tp1.ui.theme.TP1Theme
 import kotlinx.serialization.Serializable
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+
 @Serializable object ScreenDest
 @Serializable object GlobalFilmsDest
 
@@ -78,6 +90,20 @@ data class MovieDetailsDest(
     val poster_path: String? = null,
     val release_date: String = "",
     val overview: String = ""
+)
+
+data class SerieDetailsDest(
+    val name: String,
+    val poster_path: String? = null,
+    val release_date: String = "",
+    val overview: String = ""
+)
+
+data class PersonDetailsDest(
+    val name: String,
+    val profile_path: String? = null,
+    val popularity: Double = 0.0,
+    val known_for_department: String = ""
 )
 
 class MainActivity : ComponentActivity() {
@@ -128,20 +154,86 @@ fun MovieMainPage() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MovieContent(viewModel: MainViewModel) {
     val movies by viewModel.movies.collectAsStateWithLifecycle()
     val tabBackStack = remember { mutableStateListOf<Any>(FilmsTab) }
+    val series by viewModel.series.collectAsStateWithLifecycle()
+    val persons by viewModel.persons.collectAsStateWithLifecycle()
+
+    var searchText by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(true) {
         viewModel.getMovies()
+        viewModel.getSeries()
+        viewModel.getPersons()
     }
 
     Scaffold(
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                SearchBar(
+                    query = searchText,
+                    onQueryChange = { searchText = it },
+                    onSearch = {  },
+
+                    active = false,
+                    onActiveChange = { },
+
+                    placeholder = {
+                        Text(
+                            "Rechercher...",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = "Recherche",
+                            tint = Color.White
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchText.isNotEmpty()) {
+                            IconButton(onClick = { searchText = "" }) {
+                                Icon(
+                                    Icons.Rounded.HideImage,
+                                    contentDescription = "Effacer",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    },
+
+                    colors = SearchBarDefaults.colors(
+                        containerColor = Color(0xFF6200EE),
+                        inputFieldColors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color.White
+                        )
+                    ),
+
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                }
+            }
+        },
+
         bottomBar = {
-            NavigationBar {
+            NavigationBar (
+                containerColor = Color(0xFF6200EE),
+                contentColor = Color.White
+            ){
                 NavigationBarItem(
-                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Films") },
+                    icon = { Icon(Icons.Rounded.Movie, contentDescription = "Films") },
                     label = { Text("Films") },
                     selected = tabBackStack.last() is FilmsTab,
                     onClick = {
@@ -151,7 +243,7 @@ fun MovieContent(viewModel: MainViewModel) {
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Séries") },
+                    icon = { Icon(Icons.Rounded.Tv, contentDescription = "Séries") },
                     label = { Text("Séries") },
                     selected = tabBackStack.last() is SeriesTab,
                     onClick = {
@@ -161,7 +253,7 @@ fun MovieContent(viewModel: MainViewModel) {
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Rounded.Person, contentDescription = "Acteurs") },
+                    icon = { Icon(Icons.Rounded.Face, contentDescription = "Acteurs") },
                     label = { Text("Acteurs") },
                     selected = tabBackStack.last() is ActeursTab,
                     onClick = {
@@ -241,13 +333,106 @@ fun MovieContent(viewModel: MainViewModel) {
                         )
                     }
                     entry<SeriesTab> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Page Séries")
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(series) { serie ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            tabBackStack.add(
+                                                SerieDetailsDest(
+                                                    name = serie.name,
+                                                    poster_path = serie.poster_path,
+                                                    release_date = serie.first_air_date,
+                                                    overview = serie.overview
+                                                )
+                                            )
+                                        },
+                                    elevation = CardDefaults.cardElevation(4.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        AsyncImage(
+                                            model = "https://image.tmdb.org/t/p/w780${serie.poster_path}",
+                                            contentDescription = serie.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Text(
+                                            text = serie.name,
+                                            modifier = Modifier.padding(8.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textAlign = TextAlign.Center,
+                                            minLines = 2,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = serie.first_air_date,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     entry<ActeursTab> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Page Acteurs")
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(persons) { person ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            tabBackStack.add(
+                                                PersonDetailsDest(
+                                                    name = person.name,
+                                                    profile_path = person.profile_path,
+                                                    known_for_department = person.known_for_department
+                                                )
+                                            )
+                                        },
+                                    elevation = CardDefaults.cardElevation(4.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        AsyncImage(
+                                            model = "https://image.tmdb.org/t/p/w780${person.profile_path}",
+                                            contentDescription = person.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Text(
+                                            text = person.name,
+                                            modifier = Modifier.padding(8.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textAlign = TextAlign.Center,
+                                            minLines = 2,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = person.known_for_department,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
