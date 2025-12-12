@@ -2,6 +2,9 @@ package com.example.tp1
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplicationtest.PlayList
+import com.example.myapplicationtest.playlistjson
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
@@ -11,6 +14,7 @@ class MainViewModel : ViewModel() {
     val movies = MutableStateFlow<List<Movie>>(listOf())
     val series = MutableStateFlow<List<Serie>>(listOf())
     val persons = MutableStateFlow<List<Person>>(listOf())
+    val Playlist = MutableStateFlow<List<PlayList>>(listOf())
 
     val retrofit = Retrofit.Builder()
         .baseUrl("https://api.themoviedb.org/3/")
@@ -36,8 +40,9 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun fetchPlayList(): Playlist {
-        val moshi = Moshi.Builder()
-    }
+//    fun getPlayList(): PlayList{
+//        val moshi = Moshi.Builder().build()
+//        return moshi.adapter(Playlist::class.java).fromJson(playlistjson)!!
+//    }
 
 }
