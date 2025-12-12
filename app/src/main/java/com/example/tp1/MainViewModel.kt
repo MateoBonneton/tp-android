@@ -36,4 +36,8 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun fetchPlayList(): Playlist {
+        val
+    }
+
 }
